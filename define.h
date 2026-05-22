@@ -151,6 +151,67 @@ void sqrt256(const uint256_t *n, uint256_t *result) {
     }
     *result = x;
 }
+
+void mulmod256(const uint256_t *a, const uint256_t *b,
+               const uint256_t *m, uint256_t *result) {
+    uint256_t *ta  = (uint256_t *)calloc(1, sizeof(uint256_t));
+    uint256_t *tb  = (uint256_t *)calloc(1, sizeof(uint256_t));
+    uint256_t *tmp = (uint256_t *)calloc(1, sizeof(uint256_t));
+
+    // reduce a mod m with subtraction instead of div256
+    *ta = *a;
+    while (cmp256(ta, m) >= 0)
+        sub256(ta, m, ta);
+
+    *tb = *b;
+    for (int i = 0; i < 4; i++) result->limbs[i] = 0;
+
+    while (!is_zero256(tb)) {
+        if (tb->limbs[0] & 1) {
+            add256(result, ta, result);
+            if (cmp256(result, m) >= 0)
+                sub256(result, m, result);
+        }
+        shift_left256(ta, 1, tmp);
+        *ta = *tmp;
+        if (cmp256(ta, m) >= 0)
+            sub256(ta, m, ta);
+        shift_right256(tb, 1, tmp);
+        *tb = *tmp;
+    }
+
+    free(ta); free(tb); free(tmp);
+}
+
+void powmod256(const uint256_t *base, const uint256_t *exp,
+               const uint256_t *mod, uint256_t *result) {
+    uint256_t *b   = (uint256_t *)calloc(1, sizeof(uint256_t));
+    uint256_t *e   = (uint256_t *)calloc(1, sizeof(uint256_t));
+    uint256_t *tmp = (uint256_t *)calloc(1, sizeof(uint256_t));
+
+    *e = *exp;
+    result->limbs[0] = 1;
+    result->limbs[1] = result->limbs[2] = result->limbs[3] = 0;
+
+    // reduce base mod m with subtraction
+    *b = *base;
+    while (cmp256(b, mod) >= 0)
+        sub256(b, mod, b);
+
+    while (!is_zero256(e)) {
+        if (e->limbs[0] & 1) {
+            mulmod256(result, b, mod, tmp);
+            *result = *tmp;
+        }
+        mulmod256(b, b, mod, tmp);
+        *b = *tmp;
+        shift_right256(e, 1, tmp);
+        *e = *tmp;
+    }
+
+    free(b); free(e); free(tmp);
+}
+
 void bigprint(uint256_t *n) {
     // 2^256 has at most 78 decimal digits
     char buf[79];

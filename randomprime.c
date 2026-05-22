@@ -3,64 +3,7 @@
 #include <signal.h>
 #include <time.h>
 #include <unistd.h>
-void mulmod256(const uint256_t *a, const uint256_t *b,
-               const uint256_t *m, uint256_t *result) {
-    uint256_t *ta  = calloc(1, sizeof(uint256_t));
-    uint256_t *tb  = calloc(1, sizeof(uint256_t));
-    uint256_t *tmp = calloc(1, sizeof(uint256_t));
-    uint256_t *q   = calloc(1, sizeof(uint256_t));
-
-    // reduce a mod m first so ta < m
-    div256(a, m, q, ta);
-    *tb = *b;
-    for (int i = 0; i < 4; i++) result->limbs[i] = 0;
-
-    while (!is_zero256(tb)) {
-        if (tb->limbs[0] & 1) {             // if b is odd
-            add256(result, ta, result);
-            if (cmp256(result, m) >= 0)     // keep result < m
-                sub256(result, m, result);
-        }
-        shift_left256(ta, 1, tmp);          // ta = ta * 2
-        *ta = *tmp;
-        if (cmp256(ta, m) >= 0)             // keep ta < m
-            sub256(ta, m, ta);
-        shift_right256(tb, 1, tmp);         // tb = tb / 2
-        *tb = *tmp;
-    }
-
-    free(ta); free(tb); free(tmp); free(q);
-}
-
-// use shift instead of div to halve e - much faster
-// temporarily add these to find where it hangs
-void powmod256(const uint256_t *base, const uint256_t *exp,
-               const uint256_t *mod, uint256_t *result) {
-    uint256_t *b   = calloc(1, sizeof(uint256_t));
-    uint256_t *e   = calloc(1, sizeof(uint256_t));
-    uint256_t *tmp = calloc(1, sizeof(uint256_t));
-    uint256_t *q   = calloc(1, sizeof(uint256_t));
-
-    *e = *exp;
-    result->limbs[0] = 1;
-    result->limbs[1] = result->limbs[2] = result->limbs[3] = 0;
-
-    div256(base, mod, q, b);
-
-    int iter = 0;
-    while (!is_zero256(e)) {
-        if (e->limbs[0] & 1) {
-            mulmod256(result, b, mod, tmp);
-            *result = *tmp;
-        }
-        mulmod256(b, b, mod, tmp);
-        *b = *tmp;
-        shift_right256(e, 1, tmp);
-        *e = *tmp;
-    }
-
-    free(b); free(e); free(tmp); free(q);
-}// Miller-Rabin primality test
+// Miller-Rabin primality test
 // more rounds = more accurate; 20 rounds is very reliable
 int is_prime_miller_rabin(const uint256_t *n, int rounds) {
     uint256_t *two  = calloc(1, sizeof(uint256_t));
