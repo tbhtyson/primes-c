@@ -249,5 +249,4 @@ void print256_decimal(const uint256_t *n) {
 
 #endif
 /* RULES: 
-INITIALIZE ALL UINT256_T VALUES TO 0 BEFORE USE, OTHERWISE SLOP STARTS!
  */
